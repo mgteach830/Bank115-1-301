@@ -68,7 +68,18 @@ $('screenshot').onclick=async function(){
   if(!window.html2canvas){await new Promise(function(resolve,reject){var script=document.createElement('script');script.src='https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js';script.onload=resolve;script.onerror=reject;document.head.appendChild(script)})}
   var target=$('boards');
   var canvas=await html2canvas(target,{backgroundColor:'#ffffff',scale:2,useCORS:true,scrollX:0,scrollY:0,windowWidth:document.documentElement.scrollWidth});
-  var a=document.createElement('a');a.download='三甲銀行_薪水表_'+state.dates[0]+'.png';a.href=canvas.toDataURL('image/png');document.body.appendChild(a);a.click();a.remove();
+  var blob=await new Promise(function(resolve){canvas.toBlob(resolve,'image/png')});
+  if(!blob)throw Error('圖片轉換失敗');
+  var filename='三甲銀行_薪水表_'+state.dates[0]+'.png';
+  var file=new File([blob],filename,{type:'image/png'});
+  if(navigator.share && navigator.canShare && navigator.canShare({files:[file]})){
+   try{await navigator.share({files:[file],title:'三甲銀行薪水表'});return}catch(shareError){if(shareError.name==='AbortError')return}
+  }
+  var url=URL.createObjectURL(blob);
+  var preview=window.open('','_blank');
+  if(preview){preview.document.write('<!doctype html><html lang="zh-Hant"><meta name="viewport" content="width=device-width,initial-scale=1"><title>薪水表圖片</title><body style="margin:0;background:#eef2f7;text-align:center;font-family:sans-serif"><p>長按下方圖片，選擇「儲存到照片」；或使用分享按鈕儲存。</p><img id="shot" style="max-width:100%;height:auto"></body></html>');preview.document.close();preview.document.getElementById('shot').src=url}
+  else{var a=document.createElement('a');a.href=url;a.download=filename;document.body.appendChild(a);a.click();a.remove()}
+  setTimeout(function(){URL.revokeObjectURL(url)},120000);
  }catch(err){alert('無法產生截圖。請確認網路連線，或使用裝置內建截圖功能。')}
  finally{btn.disabled=false;btn.textContent=old}
 };
